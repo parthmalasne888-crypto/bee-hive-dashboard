@@ -1,23 +1,4 @@
-html,
-body,
-#root {
-  width: 100%;
-  min-width: 100%;
-  max-width: none;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  margin: 0;
-  min-width: 320px;
-  background: #fff8e1;
-}
-
-* {
-  box-sizing: border-box;
-}
+html,body,#root{width:100%;min-width:320px;max-width:none;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:#fff8e1}
+*{box-sizing:border-box}
