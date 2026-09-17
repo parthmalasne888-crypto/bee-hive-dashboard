@@ -1,94 +1,451 @@
+import { useEffect, useState } from "react";
+
 import {
   Activity,
-  Thermometer,
-  Droplets,
-  Scale,
-  HeartPulse,
+  AlertTriangle,
   Battery,
-  Wifi,
+  Bell,
+  CheckCircle2,
+  Cloud,
+  Droplets,
+  Gauge,
+  HeartPulse,
   MapPin,
-  Hexagon
+  Radio,
+  Scale,
+  ShieldCheck,
+  Thermometer,
+  Wifi,
+  Zap
 } from "lucide-react";
 
 import "./App.css";
 
+
+const initialData = {
+  temperature: 34.2,
+  humidity: 67,
+  weight: 42.8,
+  health: 92,
+  battery: 94,
+  pollination: 87,
+  beeActivity: 84
+};
+
+
 function App() {
+
+  const [data, setData] = useState(initialData);
+
+  const [history, setHistory] = useState(
+    Array.from({ length: 30 }, (_, i) => ({
+      time: i,
+      temperature: 33 + Math.random() * 2,
+      humidity: 64 + Math.random() * 5,
+      weight: 42 + Math.random() * 1.2
+    }))
+  );
+
+  const [emergency, setEmergency] = useState(false);
+
+  const [lastUpdate, setLastUpdate] = useState(
+    new Date()
+  );
+
+
+  /*
+   * DEMO LIVE SENSOR STREAM
+   *
+   * Later we will replace this section
+   * with Firebase / ESP32 data.
+   */
+
+  useEffect(() => {
+
+    const interval = setInterval(() => {
+
+      if (emergency) return;
+
+      setData(prev => {
+
+        const temperature =
+          +(prev.temperature + (Math.random() - 0.5) * 0.35)
+            .toFixed(1);
+
+        const humidity =
+          +(prev.humidity + (Math.random() - 0.5) * 0.8)
+            .toFixed(1);
+
+        const weight =
+          +(prev.weight + (Math.random() - 0.5) * 0.04)
+            .toFixed(2);
+
+        const health =
+          Math.max(
+            80,
+            Math.min(
+              99,
+              +(prev.health + (Math.random() - 0.5) * 0.5)
+                .toFixed(0)
+            )
+          );
+
+        const pollination =
+          Math.max(
+            70,
+            Math.min(
+              99,
+              +(prev.pollination + (Math.random() - 0.5) * 0.8)
+                .toFixed(0)
+            )
+          );
+
+        const beeActivity =
+          Math.max(
+            70,
+            Math.min(
+              99,
+              +(prev.beeActivity + (Math.random() - 0.5) * 1)
+                .toFixed(0)
+            )
+          );
+
+
+        setHistory(oldHistory => [
+
+          ...oldHistory.slice(1),
+
+          {
+            time: Date.now(),
+            temperature,
+            humidity,
+            weight
+          }
+
+        ]);
+
+
+        setLastUpdate(new Date());
+
+
+        return {
+          ...prev,
+          temperature,
+          humidity,
+          weight,
+          health,
+          pollination,
+          beeActivity
+        };
+
+      });
+
+    }, 2000);
+
+
+    return () => clearInterval(interval);
+
+  }, [emergency]);
+
+
+  /*
+   * DEMO EMERGENCY
+   *
+   * Simulates a sudden hive-weight increase.
+   */
+
+  const triggerEmergency = () => {
+
+    setEmergency(true);
+
+    setData(prev => ({
+      ...prev,
+      weight: +(prev.weight + 7.8).toFixed(2),
+      health: 61
+    }));
+
+    setLastUpdate(new Date());
+
+  };
+
+
+  const resetSystem = () => {
+
+    setEmergency(false);
+
+    setData(initialData);
+
+    setLastUpdate(new Date());
+
+  };
+
+
+  const getSystemStatus = () => {
+
+    if (emergency) {
+      return {
+        label: "EMERGENCY",
+        className: "emergency"
+      };
+    }
+
+    if (
+      data.temperature > 37 ||
+      data.humidity > 80
+    ) {
+      return {
+        label: "WARNING",
+        className: "warning"
+      };
+    }
+
+    return {
+      label: "NORMAL",
+      className: "normal"
+    };
+
+  };
+
+
+  const status = getSystemStatus();
+
+
   return (
-    <div className="app">
+
+    <div className={`app ${emergency ? "emergencyMode" : ""}`}>
+
+
+      {/* EMERGENCY BANNER */}
+
+      {emergency && (
+
+        <div className="emergencyBanner">
+
+          <AlertTriangle size={21} />
+
+          <div>
+
+            <strong>
+              EMERGENCY CONDITION DETECTED
+            </strong>
+
+            <span>
+              Sudden hive-weight increase detected.
+              Immediate inspection recommended.
+            </span>
+
+          </div>
+
+          <button onClick={resetSystem}>
+            Reset Alert
+          </button>
+
+        </div>
+
+      )}
+
 
       {/* NAVBAR */}
+
       <nav className="navbar">
 
         <div className="logo">
-          <div className="logoIcon">🐝</div>
+
+          <div className="logoIcon">
+            🐝
+          </div>
 
           <div>
-            <h2>HiveSense</h2>
-            <span>Smart Hive Intelligence</span>
+
+            <h2>
+              HiveSense
+            </h2>
+
+            <span>
+              Smart Hive Intelligence
+            </span>
+
           </div>
+
         </div>
+
 
         <div className="navLinks">
-          <a className="active">Dashboard</a>
-          <a>Analytics</a>
-          <a>Hive Profile</a>
-          <a>About</a>
+
+          <a className="active">
+            Dashboard
+          </a>
+
+          <a>
+            Analytics
+          </a>
+
+          <a>
+            Hive Profile
+          </a>
+
+          <a>
+            Alerts
+          </a>
+
         </div>
 
-        <div className="connection">
-          <span className="onlineDot"></span>
-          Live
+
+        <div className="liveConnection">
+
+          <span
+            className={`liveDot ${emergency ? "red" : ""}`}
+          ></span>
+
+          <span>
+            {emergency ? "ALERT" : "LIVE"}
+          </span>
+
         </div>
 
       </nav>
 
 
       {/* HERO */}
+
       <section className="hero">
 
-        <div className="heroText">
+        <div className="heroContent">
 
-          <p className="eyebrow">
-            <Activity size={16} />
-            REAL-TIME HIVE MONITORING
-          </p>
+          <div className="liveBadge">
+
+            <span></span>
+
+            LIVE SENSOR MONITORING
+
+          </div>
+
 
           <h1>
-            Intelligent monitoring
+
+            Smarter monitoring.
             <br />
-            for healthier <span>hives.</span>
+
+            <span>
+              Healthier hives.
+            </span>
+
           </h1>
 
-          <p className="heroDescription">
-            Monitor hive conditions, environmental parameters,
-            colony health and sensor data in real time.
+
+          <p>
+
+            Real-time environmental monitoring,
+            colony activity analysis and intelligent
+            emergency detection for modern beekeeping.
+
           </p>
 
-          <div className="heroButtons">
 
-            <button className="primaryButton">
-              View Live Dashboard
+          <div className="heroActions">
+
+            <button
+              className="primaryButton"
+              onClick={() => {
+                document
+                  .getElementById("monitoring")
+                  ?.scrollIntoView({
+                    behavior: "smooth"
+                  });
+              }}
+            >
+
               <Activity size={18} />
+
+              Open Live Monitoring
+
             </button>
 
-            <button className="secondaryButton">
-              Explore Analytics
+
+            <button
+              className="dangerButton"
+              onClick={triggerEmergency}
+            >
+
+              <AlertTriangle size={18} />
+
+              Test Emergency
+
             </button>
+
+          </div>
+
+
+          <div className="heroStats">
+
+            <div>
+
+              <strong>
+                2 sec
+              </strong>
+
+              <span>
+                Update interval
+              </span>
+
+            </div>
+
+
+            <div>
+
+              <strong>
+                ESP32
+              </strong>
+
+              <span>
+                Gateway
+              </span>
+
+            </div>
+
+
+            <div>
+
+              <strong>
+                24/7
+              </strong>
+
+              <span>
+                Monitoring
+              </span>
+
+            </div>
 
           </div>
 
         </div>
 
+
+        {/* ANIMATED HIVE */}
 
         <div className="hiveVisual">
 
-          <div className="hiveCircle">
+          <div className="hiveGlow"></div>
 
-            <div className="bee">
+          <div className="hiveRadar">
+
+            <div className="radarRing ring1"></div>
+
+            <div className="radarRing ring2"></div>
+
+            <div className="radarRing ring3"></div>
+
+            <div className="hiveBee">
               🐝
             </div>
 
-            <div className="pulse"></div>
+            <div className="orbit orbit1">
+              <span>●</span>
+            </div>
+
+            <div className="orbit orbit2">
+              <span>●</span>
+            </div>
 
           </div>
 
@@ -97,294 +454,544 @@ function App() {
       </section>
 
 
-      {/* STATUS BAR */}
-      <section className="statusBar">
+      {/* SYSTEM STATUS */}
 
-        <div>
-          <span className="statusLabel">
-            HIVE
-          </span>
+      <section className="systemBar">
 
-          <strong>
-            HIVE-001
-          </strong>
+        <div className="systemItem">
+
+          <div className="systemIcon">
+            <Wifi size={17} />
+          </div>
+
+          <div>
+            <span>
+              Gateway
+            </span>
+
+            <strong>
+              ESP32 Connected
+            </strong>
+          </div>
+
         </div>
 
-        <div>
-          <MapPin size={17} />
-          <span>
-            VCET Research Hive
-          </span>
+
+        <div className="systemItem">
+
+          <div className="systemIcon">
+            <Cloud size={17} />
+          </div>
+
+          <div>
+            <span>
+              Data Stream
+            </span>
+
+            <strong>
+              Receiving
+            </strong>
+          </div>
+
         </div>
 
-        <div>
-          <Wifi size={17} />
-          <span>
-            ESP32 Connected
-          </span>
+
+        <div className="systemItem">
+
+          <div className="systemIcon">
+            <MapPin size={17} />
+          </div>
+
+          <div>
+            <span>
+              Hive Location
+            </span>
+
+            <strong>
+              VCET Research Hive
+            </strong>
+          </div>
+
         </div>
 
-        <div>
-          <Battery size={17} />
-          <span>
-            94%
-          </span>
+
+        <div className="systemItem">
+
+          <div className="systemIcon">
+            <ShieldCheck size={17} />
+          </div>
+
+          <div>
+            <span>
+              System Status
+            </span>
+
+            <strong className={status.className}>
+              {status.label}
+            </strong>
+          </div>
+
         </div>
 
       </section>
 
 
-      {/* DASHBOARD */}
-      <main className="dashboard">
+      {/* MONITORING */}
 
-        <div className="sectionHeading">
+      <main
+        className="dashboard"
+        id="monitoring"
+      >
+
+
+        <div className="sectionHeader">
 
           <div>
 
-            <p className="eyebrow">
-              LIVE DATA
-            </p>
+            <div className="sectionEyebrow">
+              REAL-TIME INPUT
+            </div>
 
             <h2>
-              Hive Health Overview
+              Hive Monitoring
             </h2>
+
+            <p>
+              Live sensor readings from the hive gateway
+            </p>
 
           </div>
 
-          <div className="lastUpdated">
-            ● Updated just now
+
+          <div className="lastReceived">
+
+            <Radio size={15} />
+
+            Last received:
+
+            <strong>
+              {lastUpdate.toLocaleTimeString()}
+            </strong>
+
           </div>
 
         </div>
 
 
         {/* SENSOR CARDS */}
-        <div className="cards">
+
+        <div className="sensorGrid">
+
 
           <SensorCard
             icon={<Thermometer />}
             title="Temperature"
-            value="34.2"
+            value={data.temperature}
             unit="°C"
-            status="Optimal"
-            description="Hive internal temperature"
+            status={
+              data.temperature > 37
+                ? "High"
+                : "Optimal"
+            }
+            description="Internal hive temperature"
           />
+
 
           <SensorCard
             icon={<Droplets />}
             title="Humidity"
-            value="67"
+            value={data.humidity}
             unit="%"
-            status="Optimal"
+            status={
+              data.humidity > 80
+                ? "High"
+                : "Optimal"
+            }
             description="Relative humidity"
           />
+
 
           <SensorCard
             icon={<Scale />}
             title="Hive Weight"
-            value="42.8"
+            value={data.weight}
             unit="kg"
-            status="Stable"
-            description="Current hive weight"
+            status={
+              emergency
+                ? "SUDDEN INCREASE"
+                : "Stable"
+            }
+            description={
+              emergency
+                ? "+7.8 kg detected"
+                : "Current hive mass"
+            }
+            emergency={emergency}
           />
+
 
           <SensorCard
             icon={<HeartPulse />}
             title="Hive Health"
-            value="92"
+            value={data.health}
             unit="%"
-            status="Healthy"
-            description="Overall colony index"
+            status={
+              emergency
+                ? "Critical"
+                : "Healthy"
+            }
+            description="Overall colony health"
+            emergency={emergency}
           />
 
         </div>
 
 
-        {/* ANALYTICS */}
-        <section className="analytics">
+        {/* EMERGENCY ALERT CARD */}
+
+        <section
+          className={`alertCard ${
+            emergency ? "alertActive" : ""
+          }`}
+        >
+
+          <div className="alertIcon">
+
+            {emergency
+              ? <AlertTriangle />
+              : <CheckCircle2 />
+            }
+
+          </div>
+
+
+          <div className="alertContent">
+
+            <span>
+              SAFETY MONITOR
+            </span>
+
+            <h3>
+
+              {emergency
+                ? "Emergency condition requires attention"
+                : "All hive parameters are within normal range"
+              }
+
+            </h3>
+
+
+            <p>
+
+              {emergency
+
+                ? "A sudden increase in hive weight has been detected. This may indicate an abnormal event and the hive should be inspected."
+
+                : "The monitoring system is continuously checking temperature, humidity, weight and colony health."
+
+              }
+
+            </p>
+
+          </div>
+
+
+          <div className="alertStatus">
+
+            <Bell size={17} />
+
+            {emergency
+              ? "ACTION REQUIRED"
+              : "SYSTEM CLEAR"
+            }
+
+          </div>
+
+        </section>
+
+
+        {/* CHART */}
+
+        <section className="analyticsCard">
 
           <div className="analyticsHeader">
 
             <div>
 
-              <p className="eyebrow">
-                SENSOR ANALYTICS
-              </p>
+              <div className="sectionEyebrow">
+                LIVE TELEMETRY
+              </div>
 
               <h2>
-                Environmental Trends
+                Environmental & Weight Trends
               </h2>
 
             </div>
 
-            <select>
 
-              <option>
-                Last 24 hours
-              </option>
+            <div className="chartLegend">
 
-              <option>
-                Last 7 days
-              </option>
+              <span>
+                <i></i>
+                Temperature
+              </span>
 
-              <option>
-                Last 30 days
-              </option>
-
-            </select>
-
-          </div>
-
-
-          <div className="chart">
-
-            <div className="chartLines">
-              <span></span>
-              <span></span>
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-
-            <svg
-              viewBox="0 0 900 280"
-              preserveAspectRatio="none"
-              className="chartSvg"
-            >
-
-              <polyline
-                points="0,190 80,170 160,180 240,120 320,145 400,100 480,130 560,80 640,110 720,65 800,90 900,50"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-
-              <circle
-                cx="900"
-                cy="50"
-                r="7"
-                fill="currentColor"
-              />
-
-            </svg>
-
-
-            <div className="chartLabels">
-
-              <span>00:00</span>
-              <span>06:00</span>
-              <span>12:00</span>
-              <span>18:00</span>
-              <span>Now</span>
+              <span>
+                <i></i>
+                Weight
+              </span>
 
             </div>
 
           </div>
+
+
+          <LiveChart
+            history={history}
+            emergency={emergency}
+          />
 
         </section>
 
 
-        {/* BOTTOM CARDS */}
-        <section className="bottomGrid">
+        {/* INTELLIGENCE */}
+
+        <section className="intelligenceGrid">
 
 
-          <div className="infoCard">
+          <div className="intelligenceCard">
 
-            <div className="cardTitle">
+            <div className="cardHeader">
 
-              <Hexagon />
+              <div>
 
-              <h3>
-                Pollination Index
-              </h3>
+                <span>
+                  COLONY ACTIVITY
+                </span>
+
+                <h3>
+                  Bee Activity Index
+                </h3>
+
+              </div>
+
+              <Activity />
 
             </div>
 
 
-            <div className="bigNumber">
-              87<span>/100</span>
+            <div className="score">
+
+              {data.beeActivity}
+
+              <small>
+                /100
+              </small>
+
+            </div>
+
+
+            <div className="progressBar">
+
+              <div
+                style={{
+                  width: `${data.beeActivity}%`
+                }}
+              ></div>
+
             </div>
 
 
             <p>
-              Colony activity indicates strong
-              pollination potential based on
-              recent sensor patterns.
+              Based on current environmental
+              conditions and activity patterns.
             </p>
-
-
-            <div className="progress">
-              <div style={{ width: "87%" }}></div>
-            </div>
 
           </div>
 
 
-          <div className="infoCard">
+          <div className="intelligenceCard">
 
-            <div className="cardTitle">
+            <div className="cardHeader">
 
-              <Activity />
+              <div>
 
-              <h3>
-                System Status
-              </h3>
+                <span>
+                  POLLINATION
+                </span>
+
+                <h3>
+                  Pollination Index
+                </h3>
+
+              </div>
+
+              <Gauge />
 
             </div>
 
 
-            <div className="systemRow">
-              <span>ESP32 Gateway</span>
-              <strong className="good">
-                Online
-              </strong>
+            <div className="score">
+
+              {data.pollination}
+
+              <small>
+                /100
+              </small>
+
             </div>
 
-            <div className="systemRow">
-              <span>Temperature Sensor</span>
-              <strong className="good">
-                Normal
-              </strong>
+
+            <div className="progressBar">
+
+              <div
+                style={{
+                  width: `${data.pollination}%`
+                }}
+              ></div>
+
             </div>
 
-            <div className="systemRow">
-              <span>Humidity Sensor</span>
-              <strong className="good">
-                Normal
-              </strong>
+
+            <p>
+              Estimated pollination potential
+              from colony activity.
+            </p>
+
+          </div>
+
+
+          <div className="intelligenceCard">
+
+            <div className="cardHeader">
+
+              <div>
+
+                <span>
+                  POWER SYSTEM
+                </span>
+
+                <h3>
+                  Gateway Battery
+                </h3>
+
+              </div>
+
+              <Battery />
+
             </div>
 
-            <div className="systemRow">
-              <span>Cloud Sync</span>
-              <strong className="good">
-                Connected
-              </strong>
+
+            <div className="score">
+
+              {data.battery}
+
+              <small>
+                %
+              </small>
+
             </div>
+
+
+            <div className="progressBar">
+
+              <div
+                style={{
+                  width: `${data.battery}%`
+                }}
+              ></div>
+
+            </div>
+
+
+            <p>
+              ESP32 gateway battery level.
+            </p>
+
+          </div>
+
+
+        </section>
+
+
+        {/* DATA FLOW */}
+
+        <section className="dataFlow">
+
+          <div className="sectionEyebrow">
+            DATA PIPELINE
+          </div>
+
+          <h2>
+            From hive to dashboard
+          </h2>
+
+
+          <div className="flow">
+
+            <FlowItem
+              icon="🐝"
+              title="Hive"
+              text="Sensors collect data"
+            />
+
+            <div className="flowLine"></div>
+
+            <FlowItem
+              icon="📡"
+              title="ESP32"
+              text="Reads sensor input"
+            />
+
+            <div className="flowLine"></div>
+
+            <FlowItem
+              icon="☁️"
+              title="Cloud"
+              text="Stores telemetry"
+            />
+
+            <div className="flowLine"></div>
+
+            <FlowItem
+              icon="📊"
+              title="Dashboard"
+              text="Live visualization"
+            />
 
           </div>
 
         </section>
+
 
       </main>
 
 
       {/* FOOTER */}
+
       <footer>
 
-        <div>
+        <div className="footerLogo">
           🐝 HiveSense
         </div>
 
         <span>
-          Smart Bee Hive Monitoring Platform
+          Intelligent Bee Hive Monitoring Platform
+        </span>
+
+        <span>
+          Live System • HIVE-001
         </span>
 
       </footer>
 
     </div>
+
   );
 }
 
+
+/* SENSOR CARD */
 
 function SensorCard({
   icon,
@@ -392,12 +999,17 @@ function SensorCard({
   value,
   unit,
   status,
-  description
+  description,
+  emergency
 }) {
 
   return (
 
-    <div className="sensorCard">
+    <div
+      className={`sensorCard ${
+        emergency ? "sensorEmergency" : ""
+      }`}
+    >
 
       <div className="sensorTop">
 
@@ -405,36 +1017,216 @@ function SensorCard({
           {icon}
         </div>
 
-        <span className="status">
-          ● {status}
+        <span className="sensorStatus">
+
+          <i></i>
+
+          {status}
+
         </span>
 
       </div>
 
 
-      <p>
+      <div className="sensorTitle">
         {title}
-      </p>
+      </div>
 
 
       <div className="sensorValue">
 
         {value}
 
-        <span>
+        <small>
           {unit}
+        </small>
+
+      </div>
+
+
+      <div className="sensorDescription">
+
+        {description}
+
+      </div>
+
+
+      <div className="liveReading">
+
+        <Zap size={12} />
+
+        LIVE INPUT
+
+      </div>
+
+    </div>
+
+  );
+}
+
+
+/* LIVE CHART */
+
+function LiveChart({
+  history,
+  emergency
+}) {
+
+  const width = 900;
+  const height = 280;
+
+  const tempPoints = history
+    .map((item, index) => {
+
+      const x =
+        (index / (history.length - 1))
+        * width;
+
+      const normalized =
+        (item.temperature - 31) / 8;
+
+      const y =
+        height -
+        Math.max(0, Math.min(1, normalized))
+        * 220 -
+        20;
+
+      return `${x},${y}`;
+
+    })
+    .join(" ");
+
+
+  const weightPoints = history
+    .map((item, index) => {
+
+      const x =
+        (index / (history.length - 1))
+        * width;
+
+      const normalized =
+        (item.weight - 40) / 12;
+
+      const y =
+        height -
+        Math.max(0, Math.min(1, normalized))
+        * 220 -
+        20;
+
+      return `${x},${y}`;
+
+    })
+    .join(" ");
+
+
+  return (
+
+    <div
+      className={`liveChart ${
+        emergency ? "chartEmergency" : ""
+      }`}
+    >
+
+      <div className="chartGrid">
+
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+
+      </div>
+
+
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
+      >
+
+        <polyline
+          points={tempPoints}
+          className="temperatureLine"
+        />
+
+        <polyline
+          points={weightPoints}
+          className="weightLine"
+        />
+
+      </svg>
+
+
+      <div className="chartTime">
+
+        <span>
+          -60 min
+        </span>
+
+        <span>
+          -45 min
+        </span>
+
+        <span>
+          -30 min
+        </span>
+
+        <span>
+          -15 min
+        </span>
+
+        <span>
+          NOW
         </span>
 
       </div>
 
 
-      <small>
-        {description}
-      </small>
+      {emergency && (
+
+        <div className="chartAlert">
+
+          <AlertTriangle size={15} />
+
+          Weight increase detected
+
+        </div>
+
+      )}
 
     </div>
 
   );
+}
+
+
+/* FLOW */
+
+function FlowItem({
+  icon,
+  title,
+  text
+}) {
+
+  return (
+
+    <div className="flowItem">
+
+      <div className="flowIcon">
+        {icon}
+      </div>
+
+      <strong>
+        {title}
+      </strong>
+
+      <span>
+        {text}
+      </span>
+
+    </div>
+
+  );
+
 }
 
 
