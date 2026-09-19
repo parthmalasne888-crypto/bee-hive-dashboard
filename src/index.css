@@ -1,23 +1,6 @@
-html,
-body,
-#root {
-  width: 100%;
-  min-width: 100%;
-  max-width: none;
-  margin: 0;
-  padding: 0;
-}
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap');
+*{box-sizing:border-box} html{scroll-behavior:smooth;background:#f4f1e8} body{margin:0;min-width:320px;color:#11181d;font-family:Manrope,Arial,sans-serif;background:#f4f1e8} button,input{font:inherit}button{cursor:pointer}#root{min-height:100vh;overflow:hidden}
 
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  margin: 0;
-  min-width: 320px;
-  background: #050806;
-}
-
-* {
-  box-sizing: border-box;
-}
+::selection{background:rgba(255,122,48,.22);color:#071521}
+:focus-visible{outline:2px solid #36c6b0;outline-offset:3px}
+body{overflow-x:hidden}
