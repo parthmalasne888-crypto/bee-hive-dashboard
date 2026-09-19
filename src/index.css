@@ -1,1 +1,23 @@
-html,body,#root{width:100%;min-width:320px;min-height:100%;margin:0;padding:0}html{scroll-behavior:smooth}body{background:#050908}*{box-sizing:border-box}
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #050806;
+}
+
+* {
+  box-sizing: border-box;
+}
