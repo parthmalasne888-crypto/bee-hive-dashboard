@@ -1,16 +1,53 @@
-# React + Vite
+# HiveSense Nature Interactive V3
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+This update focuses on the requested full-screen usability and realism changes.
 
-Currently, two official plugins are available:
+### Home
+- More grounded, natural apiary landscape using layered fields, trees, hives, path, water, crop plots, market stall and regional station.
+- Large readable title from the first screen.
+- Four click targets: Live Hive Health, B-Mart, Pollination, Regional Intelligence.
+- No landing-page scrolling is required to choose a system.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### Live Hive Health
+- Larger full-screen typography.
+- Full-screen responsive composition.
+- Spacious metric strip.
+- 24H / 7D / 30D controls.
+- Trend, min, average, max and current reading.
+- Normal operating band and anomaly view.
+- Emergency alert simulation with Web Audio sound when alert sound is armed.
 
-## React Compiler
+### B-Mart
+- Replaced liquor-looking bottles with wider honey jars.
+- Product detail panel includes source, hive, batch, harvest, timeline and NFT-style provenance reference.
+- Clearly marked demo data and demo commerce.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Traceability
+- Hive and date selectors.
+- Current stage and active records list.
 
-## Expanding the Oxlint configuration
+### Pollination
+- Larger readable interface.
+- Locality search.
+- Clickable pollination zones.
+- Coordinates, zone information and pollination index.
+- Orientation compass and map scale.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+### Regional Intelligence
+- Larger typography and readable stats.
+- More informative regional comparison.
+- Compass and cluster visualization.
+- Page is scrollable when needed.
+
+The app intentionally uses local CSS/vector scene construction rather than AI-generated stock imagery, so it stays editable and does not depend on external image URLs.
+
+
+### V4 typography pass
+- Increased nearly all interface labels, body text, buttons, metric text and headings.
+- Increased key health, graph, market and regional typography.
+- Added more spacing so larger text remains legible at 100% browser zoom.
+- Retained internal page scrolling where content legitimately exceeds viewport height.
+
+
+### V5 real-photography home scene
+The first page now uses the supplied apiary photograph as the full-screen visual foundation. Interactive hotspots sit over the actual hive, B-MART, flowering field and regional-sensor areas. The old CSS-built landscape is no longer used for the home screen.
