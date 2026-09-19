@@ -1,44 +1,22 @@
-import { ArrowUpRight, BadgeCheck, ShoppingBag, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { ArrowUpRight, BadgeCheck, ChevronRight, MapPin, PackageCheck, ShoppingBag, Star } from "lucide-react";
 
-export default function BMart({ products, onProduct, onPlayTone }) {
-  return (
-    <section className="market section" id="market">
-      <div className="market-intro">
-        <p className="kicker">B-MART <b>DEMO MARKETPLACE</b></p>
-        <h2>From healthy hives<br/><em>to traceable honey.</em></h2>
-        <p>HiveSense connects monitoring, harvesting and the market—so every jar can carry its origin with it.</p>
-        <button className="button dark" onClick={() => onPlayTone?.("click")}><ShoppingBag size={17}/> Sell honey through B-Mart</button>
+export default function BMart({ products, onProduct, onSound }) {
+  const [filter, setFilter] = useState("All");
+  const filters = ["All", "Forest", "Wildflower", "Farm"];
+  const visible = filter === "All" ? products : products.filter(p => p.type.toLowerCase().includes(filter.toLowerCase()) || p.name.toLowerCase().includes(filter.toLowerCase()));
+  return <section className="market-section page-section" id="market">
+    <div className="market-aura"/><div className="market-grid"/>
+    <div className="page-shell">
+      <div className="market-head split"><div><div className="eyebrow orange"><span className="pulse-dot"/> B-MART / DEMO MARKETPLACE</div><h2>The hive meets <span>the market.</span></h2></div><p>Traceable honey, presented with the story of the hive that produced it. Browse demo products, inspect their origin, and follow every batch back to its source.</p></div>
+      <div className="market-storyline"><span>HEALTHY HIVE</span><i>→</i><span>HARVEST</span><i>→</i><span>TRACEABLE BATCH</span><i>→</i><strong>B-MART</strong></div>
+      <div className="market-toolbar"><div className="filter-tabs">{filters.map(f => <button key={f} className={filter === f ? "active" : ""} onClick={() => { setFilter(f); onSound("click"); }}>{f}</button>)}</div><span><ShoppingBag size={15}/> {visible.length} demo products</span></div>
+      <div className="product-grid-new">{visible.map((p, idx) => <article className="product-card" key={p.id} style={{ "--delay": `${idx * 70}ms` }} onClick={() => { onProduct(p); onSound("open"); }}>
+        <div className={`product-visual ${p.hue}`}><div className="product-orb"/><div className="jar-3d"><div className="lid"/><div className="label"><small>HIVESENSE</small><b>{p.name.split(" ")[0]}</b><em>{p.type}</em></div></div><span className="visual-tag">TRACEABLE</span><span className="visual-code">{p.batch}</span></div>
+        <div className="product-copy"><div className="product-meta"><span><MapPin size={12}/>{p.origin}</span><span><Star size={12}/>{p.rating}</span></div><h3>{p.name}</h3><p>{p.seller}</p><div className="product-bottom"><div><b>{p.price}</b><small>{p.weight}</small></div><button>View product <ArrowUpRight size={15}/></button></div><div className="trace-chip"><BadgeCheck size={12}/> Origin + harvest record available</div></div>
+      </article>)}</div>
 
-        <div className="market-pulse">
-          <div><Sparkles size={15}/><span>18 active batches</span></div>
-          <div><b>₹654</b><span>demo avg. jar price</span></div>
-          <div><b>100%</b><span>traceability records</span></div>
-        </div>
-      </div>
-
-      <div className="market-products-wrap">
-        <div className="market-headline-row"><span>FEATURED DEMO PRODUCTS</span><small>BUY • SELL • TRACE</small></div>
-        <div className="product-grid">
-          {products.map(product => (
-            <article className="product" key={product.id} onMouseEnter={() => onPlayTone?.("hover")}>
-              <div className={`jar-area ${product.hue}`}>
-                <span>DEMO PRODUCT</span>
-                <div className="jar"><i/><b>HIVE<br/>SENSE</b></div>
-                <div className="jar-glow"/>
-              </div>
-              <div className="product-body">
-                <div><small>{product.type} · {product.weight}</small><h3>{product.name}</h3><p>{product.origin} · {product.seller}</p></div>
-                <strong>{product.price}</strong>
-              </div>
-              <div className="trace-chip"><BadgeCheck size={15}/> Traceability record available</div>
-              <div className="product-actions">
-                <button onClick={() => { onPlayTone?.("click"); onProduct(product); }}>View product <ArrowUpRight size={16}/></button>
-                <button className="buy" onClick={() => { onPlayTone?.("buy"); onProduct(product); }}>Buy demo</button>
-              </div>
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
+      <div className="market-bottom"><div className="market-metric"><small>DEMO MARKETPLACE VOLUME</small><b>₹1.96L</b><span>sample catalog value</span></div><div className="market-metric"><small>TRACEABILITY RECORDS</small><b>100%</b><span>shown in this prototype</span></div><div className="market-metric"><small>ACTIVE SELLERS</small><b>18</b><span>simulated apiary profiles</span></div><button className="outline-light" onClick={() => { document.getElementById("traceability")?.scrollIntoView({behavior:"smooth"}); onSound("click"); }}>Explore traceability <ChevronRight size={17}/></button></div>
+    </div>
+  </section>;
 }

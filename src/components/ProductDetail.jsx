@@ -1,41 +1,10 @@
-import { BadgeCheck, X, ArrowRight } from "lucide-react";
-
-export default function ProductDetail({ product, onClose, onPlayTone }) {
-  return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Product detail">
-      <article className="product-modal">
-        <button className="close" onClick={() => { onPlayTone?.("click"); onClose(); }} aria-label="Close product"><X/></button>
-        <div className={`modal-jar ${product.hue}`}>
-          <div className="jar"><i/><b>HIVE<br/>SENSE</b></div>
-          <span className="modal-demo-pill">DEMO MARKETPLACE</span>
-        </div>
-
-        <div className="modal-copy">
-          <p className="kicker">B-MART PRODUCT <b>DEMO DATA</b></p>
-          <h2>{product.name}</h2>
-          <p>{product.type} honey from {product.origin}. Harvested by {product.seller}.</p>
-
-          <div className="detail-grid">
-            <span>Origin <b>{product.origin}</b></span>
-            <span>Harvest date <b>{product.harvest}</b></span>
-            <span>Hive source <b>{product.hive}</b></span>
-            <span>Batch number <b>{product.batch}</b></span>
-            <span>Net weight <b>{product.weight}</b></span>
-            <span>Seller <b>{product.seller}</b></span>
-          </div>
-
-          <div className="provenance-mini">
-            <span>HIVE</span><ArrowRight size={14}/><span>HARVEST</span><ArrowRight size={14}/><span>BATCH</span><ArrowRight size={14}/><span>PRODUCT</span>
-          </div>
-
-          <div className="modal-bottom">
-            <strong>{product.price}</strong>
-            <button className="button orange" onClick={() => { onPlayTone?.("buy"); onClose(); }}>Buy demo product</button>
-          </div>
-
-          <p className="verified"><BadgeCheck size={16}/> Traceability record available</p>
-        </div>
-      </article>
-    </div>
-  );
+import { ArrowUpRight, BadgeCheck, MapPin, X } from "lucide-react";
+export default function ProductDetail({ product, onClose }) {
+  return <div className="modal-layer" onMouseDown={e => e.target === e.currentTarget && onClose()}>
+    <article className="product-modal-new">
+      <button className="modal-close" onClick={onClose} aria-label="Close"><X size={18}/></button>
+      <div className={`modal-visual ${product.hue}`}><div className="modal-scan"/><div className="jar-3d huge"><div className="lid"/><div className="label"><small>HIVESENSE</small><b>{product.name.split(" ")[0]}</b><em>{product.type}</em></div></div><span className="visual-tag">DEMO PRODUCT</span></div>
+      <div className="modal-content"><div className="eyebrow orange">B-MART / PRODUCT RECORD</div><h2>{product.name}</h2><p className="modal-lede">A demonstration marketplace record linking the product to its hive, harvest and batch origin.</p><div className="modal-price"><b>{product.price}</b><span>{product.weight}</span></div><div className="detail-grid-new"><div><small>ORIGIN</small><b>{product.origin}</b></div><div><small>HIVE</small><b>{product.hive}</b></div><div><small>HARVEST</small><b>{product.harvest}</b></div><div><small>BATCH</small><b>{product.batch}</b></div></div><div className="verification"><BadgeCheck size={15}/><div><b>Traceability record available</b><span>Demonstration data · not a live transaction</span></div></div><div className="modal-actions"><button className="primary-cta">Buy demo product <ArrowUpRight size={16}/></button><button className="ghost-btn" onClick={onClose}>Back to market</button></div><div className="modal-origin"><MapPin size={14}/>{product.seller} · {product.availability}</div></div>
+    </article>
+  </div>;
 }
