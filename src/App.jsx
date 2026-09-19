@@ -162,6 +162,8 @@ const defaultProducts = [
     stock: 24,
     quality: "A+",
     source: "Green Valley #01",
+    batchId: "HC-2026-001",
+    description: "Single-origin wildflower honey from a monitored hive.",
     verified: true,
   },
   {
@@ -173,6 +175,8 @@ const defaultProducts = [
     stock: 18,
     quality: "A",
     source: "Sunrise #02",
+    batchId: "HC-2026-002",
+    description: "Light, floral acacia honey with a traceable source record.",
     verified: true,
   },
   {
@@ -184,6 +188,8 @@ const defaultProducts = [
     stock: 11,
     quality: "A+",
     source: "Mountain #03",
+    batchId: "HC-2026-003",
+    description: "Rich forest honey from the Satara demonstration network.",
     verified: true,
   },
 ];
@@ -1600,8 +1606,11 @@ function BMart({ activeSection, products, setProducts }) {
     stock: "",
     source: "Green Valley #01",
     quality: "A+",
+    batchId: "",
+    description: "",
   });
   const [published, setPublished] = useState(false);
+  const [orderNotice, setOrderNotice] = useState("");
 
   const filteredProducts =
     filter === "All"
@@ -1625,6 +1634,8 @@ function BMart({ activeSection, products, setProducts }) {
       stock: Number(form.stock),
       quality: form.quality,
       source: form.source,
+      batchId: form.batchId || `HS-DEMO-${String(products.length + 1).padStart(3, "0")}`,
+      description: form.description || "Traceable honey listing created in the HiveSense demo.",
       verified: true,
     };
 
@@ -1637,6 +1648,8 @@ function BMart({ activeSection, products, setProducts }) {
       stock: "",
       source: "Green Valley #01",
       quality: "A+",
+      batchId: "",
+      description: "",
     });
     setPublished(true);
     setShowForm(false);
@@ -1679,6 +1692,13 @@ function BMart({ activeSection, products, setProducts }) {
         <div className="publish-toast">
           <CheckCircle2 size={16} />
           Your honey has been listed on B-Mart.
+        </div>
+      )}
+
+      {orderNotice && (
+        <div className="publish-toast order-toast" role="status">
+          <CheckCircle2 size={16} />
+          {orderNotice}
         </div>
       )}
 
@@ -1727,13 +1747,13 @@ function BMart({ activeSection, products, setProducts }) {
 
       {showForm && (
         <div className="modal-backdrop" onClick={() => setShowForm(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-card" role="dialog" aria-modal="true" aria-labelledby="sell-honey-title" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
                 <span>OWNER MARKETPLACE</span>
-                <h3>Sell your honey</h3>
+                <h3 id="sell-honey-title">Sell your honey</h3>
               </div>
-              <button className="icon-button" onClick={() => setShowForm(false)}>
+              <button className="icon-button" onClick={() => setShowForm(false)} aria-label="Close listing form">
                 <X size={17} />
               </button>
             </div>
@@ -1804,6 +1824,12 @@ function BMart({ activeSection, products, setProducts }) {
                   <option>B+</option>
                 </select>
               </Field>
+              <Field label="Batch ID (optional)">
+                <input value={form.batchId} onChange={(e) => updateField("batchId", e.target.value)} placeholder="e.g. HC-2026-004" />
+              </Field>
+              <Field label="Product note (optional)">
+                <input value={form.description} onChange={(e) => updateField("description", e.target.value)} placeholder="Harvest, flavour, or processing detail" />
+              </Field>
 
               <div className="form-note">
                 <LockKeyhole size={13} />
@@ -1821,13 +1847,13 @@ function BMart({ activeSection, products, setProducts }) {
 
       {selectedProduct && (
         <div className="modal-backdrop" onClick={() => setSelectedProduct(null)}>
-          <div className="modal-card product-detail-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-card product-detail-modal" role="dialog" aria-modal="true" aria-labelledby="product-detail-title" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
                 <span>TRACEABLE PRODUCT</span>
-                <h3>{selectedProduct.name}</h3>
+                <h3 id="product-detail-title">{selectedProduct.name}</h3>
               </div>
-              <button className="icon-button" onClick={() => setSelectedProduct(null)}>
+              <button className="icon-button" onClick={() => setSelectedProduct(null)} aria-label="Close product details">
                 <X size={17} />
               </button>
             </div>
@@ -1858,9 +1884,17 @@ function BMart({ activeSection, products, setProducts }) {
                   {selectedProduct.type} • {selectedProduct.weight}. Source hive:
                   {" "}{selectedProduct.source}.
                 </p>
-                <button className="secondary-button" onClick={() => setSelectedProduct(null)}>
-                  Close details
-                </button>
+                <p className="batch-reference">Batch {selectedProduct.batchId || "Demo batch"} · {selectedProduct.description || "Traceability details are ready for verification."}</p>
+                <div className="detail-actions">
+                  <button className="primary-button" onClick={() => {
+                    setOrderNotice(`Demo order interest saved for ${selectedProduct.name}. Connect payments and orders to make this live.`);
+                    setSelectedProduct(null);
+                    window.setTimeout(() => setOrderNotice(""), 4200);
+                  }}>
+                    Request order <ChevronRight size={14} />
+                  </button>
+                  <button className="secondary-button" onClick={() => setSelectedProduct(null)}>Close details</button>
+                </div>
               </div>
             </div>
           </div>

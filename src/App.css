@@ -3188,6 +3188,16 @@ main{
   }
 }
 
+/* Marketplace actions retain the dashboard rhythm while making retailer intent explicit. */
+.detail-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:16px}
+.batch-reference{color:var(--muted);font-size:11px;line-height:1.6}
+.order-toast{max-width:440px}
+
+@media (max-width:640px){
+  .detail-actions{flex-direction:column}
+  .detail-actions button{width:100%;justify-content:center}
+}
+
 /* =========================================================
    REFINED HERO BEE — recognizable side-profile silhouette
 ========================================================= */
