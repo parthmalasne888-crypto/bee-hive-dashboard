@@ -1,53 +1,61 @@
-# HiveSense Nature Interactive V3
+# HiveSense Nature Interactive V7 — Internal Background / Palette Pass
 
-This update focuses on the requested full-screen usability and realism changes.
+This version preserves the existing HiveSense project structure and interactions from V5.
 
-### Home
-- More grounded, natural apiary landscape using layered fields, trees, hives, path, water, crop plots, market stall and regional station.
-- Large readable title from the first screen.
-- Four click targets: Live Hive Health, B-Mart, Pollination, Regional Intelligence.
-- No landing-page scrolling is required to choose a system.
+The supplied reference board is used only for:
+- internal-page photographic background direction
+- internal-page palette direction
+- surface color treatment
 
-### Live Hive Health
-- Larger full-screen typography.
-- Full-screen responsive composition.
-- Spacious metric strip.
-- 24H / 7D / 30D controls.
-- Trend, min, average, max and current reading.
-- Normal operating band and anomaly view.
-- Emergency alert simulation with Web Audio sound when alert sound is armed.
+### Internal backgrounds
+- Live Health → macro botanical / bee background style
+- B-Mart → honey still-life background style
+- Pollination → aerial farmland background style
+- Regional Intelligence → monsoon hills / landscape background style
 
-### B-Mart
-- Replaced liquor-looking bottles with wider honey jars.
-- Product detail panel includes source, hive, batch, harvest, timeline and NFT-style provenance reference.
-- Clearly marked demo data and demo commerce.
+### Palette matched to the reference board
+- Ivory #F4F1E6
+- Sage #E5E8DD
+- Mist Green #D4E0C9
+- Forest Green #31583F
+- Olive #6F8065
+- Honey Gold #C6A45A
+- Honey Cream #E8D9AE
+- Sage Grey #C9D1C0
+- Earth Grey #74796D
 
-### Traceability
-- Hive and date selectors.
-- Current stage and active records list.
-
-### Pollination
-- Larger readable interface.
-- Locality search.
-- Clickable pollination zones.
-- Coordinates, zone information and pollination index.
-- Orientation compass and map scale.
-
-### Regional Intelligence
-- Larger typography and readable stats.
-- More informative regional comparison.
-- Compass and cluster visualization.
-- Page is scrollable when needed.
-
-The app intentionally uses local CSS/vector scene construction rather than AI-generated stock imagery, so it stays editable and does not depend on external image URLs.
+The original placement/structure of the HiveSense pages remains intact. Backgrounds sit behind the existing UI rather than replacing or rearranging it.
 
 
-### V4 typography pass
-- Increased nearly all interface labels, body text, buttons, metric text and headings.
-- Increased key health, graph, market and regional typography.
-- Added more spacing so larger text remains legible at 100% browser zoom.
-- Retained internal page scrolling where content legitimately exceeds viewport height.
+### V8 fixes
+- The internal reference photographs are now intentionally much more visible.
+- Reduced the cream/green wash that was hiding the background photography.
+- Increased typography across internal pages: headings, labels, metrics, graph UI, buttons, traceability, pollination and regional data.
+- Kept the existing HiveSense structure and interactions unchanged.
 
 
-### V5 real-photography home scene
-The first page now uses the supplied apiary photograph as the full-screen visual foundation. Interactive hotspots sit over the actual hive, B-MART, flowering field and regional-sensor areas. The old CSS-built landscape is no longer used for the home screen.
+### V9 reference-match pass
+- The supplied internal photographic backgrounds are now the dominant visual layer.
+- Removed the heavy page-wide cream veil that was hiding the photographs.
+- Kept the existing content structure, data, graphs, product details and interactions.
+- Kept a single top header only; no left/side section-switching navigation.
+- Content surfaces are translucent enough to retain the reference-image feel while remaining readable.
+
+### V10 reference-board replication pass
+- Internal Health, B-Mart, Pollination and Regional pages are composed to closely match the user's supplied reference board.
+- The side navigation is removed; only the compact top header remains.
+- Reference-style ivory/sage/honey-green card system is used.
+- Larger farmer-friendly typography is retained.
+- Existing HiveSense data, hive selector, graph ranges, alert sound, B-Mart products, provenance/NFT references, pollination locality interaction and regional switching are preserved.
+- The Home page remains the photo-led apiary navigation experience.
+
+
+### V11 exact-photo pass
+- Replaced Health background with the exact user-supplied bee-on-flower photograph.
+- Replaced B-Mart background with the exact user-supplied honey jar + dipper photograph.
+- Replaced Pollination background with the exact user-supplied aerial farmland photograph.
+- Replaced Regional background with the exact user-supplied mountain/valley photograph.
+- No blur, no page-wide photo overlay and no backdrop-filter is applied to those backgrounds.
+- B-Mart featured product imagery now uses the exact supplied honey bottle photograph.
+- Removed the QR code panel from B-Mart; provenance/NFT information remains as text.
+- Alert sound now repeats continuously while an alert is active and alert sound is armed, stopping when the alert is reset or sound is muted.

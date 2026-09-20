@@ -139,6 +139,7 @@ function HomeScene({onOpen}){
   </div>;
 }
 
+
 function App(){
   const [view,setView]=useState('home');
   const [hive,setHive]=useState(HIVES[4]);
@@ -149,151 +150,325 @@ function App(){
   const [traceHive,setTraceHive]=useState('HIVE 07');
   const [traceDate,setTraceDate]=useState('18 Sep 2026');
   const [pollSearch,setPollSearch]=useState('');
-  const [pollZone,setPollZone]=useState(null);
+  const [pollZone,setPollZone]=useState(ZONES[2]);
   const [region,setRegion]=useState('Maharashtra');
   const [productOpen,setProductOpen]=useState(PRODUCTS[0]);
   const [clock,setClock]=useState(new Date());
+  const [marketNotice,setMarketNotice]=useState('');
 
   const telem=useTelemetry(hive,alert);
-  useEffect(()=>{const id=setInterval(()=>setClock(new Date()),1000);return()=>clearInterval(id)},[]);
+
+  useEffect(()=>{
+    const id=setInterval(()=>setClock(new Date()),1000);
+    return()=>clearInterval(id);
+  },[]);
 
   const cfg=METRICS.find(x=>x[0]===metric);
-  const val={temperature:telem.temperature,humidity:telem.humidity,weight:telem.weight,activity:telem.activity,battery:telem.battery}[metric];
+  const val={
+    temperature:telem.temperature,
+    humidity:telem.humidity,
+    weight:telem.weight,
+    activity:telem.activity,
+    battery:telem.battery
+  }[metric];
+
   const series=useMemo(()=>{
     const spread={temperature:.9,humidity:3.2,weight:.25,activity:11,battery:2.2}[metric];
     const rangeBoost=range==='24H'?0:range==='7D'?1.35:1.85;
     return makeSeries(val,spread+rangeBoost,range==='24H'?58:range==='7D'?52:45);
   },[val,metric,range]);
+
   const current=`${metric==='temperature'||metric==='weight'?val.toFixed(1):Math.round(val)}${cfg[2]}`;
 
   const trace=TRACE_RECORDS.find(r=>r.hive===traceHive && r.date===traceDate)
     || TRACE_RECORDS.find(r=>r.hive===traceHive) || TRACE_RECORDS[0];
 
-  function nav(v){setView(v);setAlert(false)}
+  const regional=REGIONS[region];
+  const regionSeries=useMemo(()=>makeSeries(
+    region==='Western Ghats'?89:region==='Konkan'?84:82,
+    7,
+    12
+  ),[region]);
+
+  function nav(v){setView(v);setAlert(false);setMarketNotice('');}
   function emergencyTone(){
     if(!alertsArmed)return;
     try{
-      const A=window.AudioContext||window.webkitAudioContext; if(!A)return;
-      const ctx=new A(),gain=ctx.createGain();gain.gain.value=.08;gain.connect(ctx.destination);
-      [880,660,880,660].forEach((f,i)=>{const o=ctx.createOscillator();o.frequency.value=f;o.type='sine';o.connect(gain);const t=ctx.currentTime+i*.18;o.start(t);o.stop(t+.11)});
+      const A=window.AudioContext||window.webkitAudioContext;
+      if(!A)return;
+      const ctx=new A(),gain=ctx.createGain();
+      gain.gain.value=.075;gain.connect(ctx.destination);
+      [880,660,880,660].forEach((f,i)=>{
+        const o=ctx.createOscillator();
+        o.frequency.value=f;o.type='sine';o.connect(gain);
+        const t=ctx.currentTime+i*.18;o.start(t);o.stop(t+.11);
+      });
     }catch{}
   }
-  function simulateAlert(){setAlert(v=>{if(!v)setTimeout(emergencyTone,15);return !v})}
+
+  useEffect(()=>{
+    if(!alert || !alertsArmed) return;
+    emergencyTone();
+    const id=setInterval(emergencyTone, 1150);
+    return()=>clearInterval(id);
+  },[alert,alertsArmed]);
+
+  function simulateAlert(){
+    setAlert(v=>!v);
+  }
   function findPoll(){
     const q=pollSearch.trim().toLowerCase();
     const exact=ZONES.find(z=>z.aliases.some(a=>q.includes(a)||a.includes(q)));
-    setPollZone(exact||null);
+    if(exact)setPollZone(exact);
   }
+
+  const uiDate=clock.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+
   return <div className="app">
-    <header className="bar">
-      <button className="brand" onClick={()=>nav('home')}><span className="brand-symbol">HS</span> HIVESENSE</button>
-      <span className="bar-title">{view==='home'?'LIVING APIARY / SELECT A SYSTEM':view.replace('-',' ').toUpperCase()}</span>
-      <div className="bar-right">
-        <span className="bar-time">{clock.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>
-        <button className={`alert-arm ${alertsArmed?'armed':''}`} onClick={()=>setAlertsArmed(v=>!v)}>{alertsArmed?'ALERT SOUND ON':'ALERT SOUND OFF'}</button>
-        {view!=='home' && <button className="back" onClick={()=>nav('home')}>← APIARY</button>}
+    <header className="ref-topbar">
+      <button className="ref-brand" onClick={()=>nav('home')}>
+        <span className="ref-brand-mark">HS</span>
+        <span>HIVESENSE</span>
+      </button>
+      <div className="ref-page-title">
+        {view==='home'?'LIVING APIARY':view==='health'?'HEALTH':view==='market'?'B-MART':view==='pollination'?'POLLINATION':'REGIONAL'}
+      </div>
+      <div className="ref-top-actions">
+        <span className="ref-date">{uiDate}</span>
+        <button className={`ref-alert ${alertsArmed?'on':''}`} onClick={()=>setAlertsArmed(v=>!v)}>
+          {alertsArmed?'ALERT SOUND ON':'ALERT SOUND OFF'}
+        </button>
+        {view!=='home' && <button className="ref-back" onClick={()=>nav('home')}>← APIARY</button>}
       </div>
     </header>
 
     {view==='home' && <HomeScene onOpen={nav}/>}
 
-    {view==='health' && <main className="page health-page">
-      <div className="page-head"><div><span className="kicker">01 · LIVE HIVE HEALTH</span><h1>THE HIVE, <em>IN VIEW.</em></h1><p>{hive.id} · {hive.location} · 6 sensor nodes connected</p></div>
-        <div className="hive-pills">{HIVES.map(h=><button key={h.id} className={h.id===hive.id?'active':''} onClick={()=>{setHive(h);setAlert(false)}}>{h.id}</button>)}</div>
+    {view==='health' && <main className="ref-page health-ref">
+      <div className="ref-hero-copy">
+        <span className="ref-kicker">01 · LIVE HIVE HEALTH</span>
+        <h1>The Hive, In <em>View.</em></h1>
+        <p>Real-time hive health, environmental conditions, and colony activity — all in one place.</p>
       </div>
-      <section className="health-grid">
-        <div className="health-orchard">
-          <div className="health-core"><span>HIVE HEALTH</span><strong>{Math.round(telem.health)}<small>%</small></strong><b className={alert?'bad':''}>{alert?'ATTENTION':'STABLE'}</b></div>
-          <div className="health-chip hc1"><small>TEMPERATURE</small><b>{telem.temperature.toFixed(1)}°C</b></div>
-          <div className="health-chip hc2"><small>HUMIDITY</small><b>{Math.round(telem.humidity)}%</b></div>
-          <div className="health-chip hc3"><small>WEIGHT</small><b>{telem.weight.toFixed(1)} kg</b></div>
-          <div className="health-chip hc4"><small>BEE ACTIVITY</small><b>{Math.round(telem.activity)}%</b></div>
-          <div className="health-chip hc5"><small>BATTERY</small><b>{Math.round(telem.battery)}%</b></div>
-          <div className="orchard-note">LIVE READING · {hive.location}</div>
-        </div>
 
-        <div className="health-work">
-          <div className="metric-strip">{METRICS.map(([key,label,unit,band,color])=>{
-            const v={temperature:telem.temperature,humidity:telem.humidity,weight:telem.weight,activity:telem.activity,battery:telem.battery}[key];
-            const formatted=key==='temperature'||key==='weight'?`${v.toFixed(1)}${unit}`:`${Math.round(v)}${unit}`;
-            return <button key={key} className={`metric-tile ${metric===key?'selected':''}`} onClick={()=>setMetric(key)}><div><span>{label}</span><small>{alert&&key!=='battery'?'ATTENTION':'within band'}</small></div><strong>{formatted}</strong><MiniSpark data={makeSeries(v,Math.max(.2,Math.abs(v)*.018),16)} color={color}/><em>NORMAL {band}</em></button>
-          })}</div>
+      <div className="health-hive-switch">
+        {HIVES.map(h=>
+          <button key={h.id} className={h.id===hive.id?'active':''} onClick={()=>{setHive(h);setAlert(false)}}>
+            {h.id}
+          </button>
+        )}
+      </div>
 
-          <div className="graph-panel">
-            <div className="graph-toolbar">
-              <div><span className="kicker">HIVE PROFILE · {RANGE_LABELS[range].toUpperCase()}</span><h2>{cfg[1]} <small>· {cfg[2]}</small></h2></div>
-              <div className="range-buttons">{['24H','7D','30D'].map(r=><button key={r} className={range===r?'active':''} onClick={()=>setRange(r)}>{r}</button>)}</div>
+      <div className="ref-health-grid">
+        <div className="ref-stat-card"><span>♨ TEMPERATURE</span><strong>{telem.temperature.toFixed(1)}°C</strong><small>Normal range<br/>33° — 36°C</small><MiniSpark data={makeSeries(telem.temperature,.6,18)} color="#9C7C42"/></div>
+        <div className="ref-stat-card"><span>◌ HUMIDITY</span><strong>{Math.round(telem.humidity)}%</strong><small>Normal range<br/>58% — 74%</small><MiniSpark data={makeSeries(telem.humidity,2.5,18)} color="#4E9470"/></div>
+        <div className="ref-stat-card"><span>◫ HIVE WEIGHT</span><strong>{telem.weight.toFixed(1)} kg</strong><small>Normal range<br/>38 — 48 kg</small><MiniSpark data={makeSeries(telem.weight,.18,18)} color="#B68E3E"/></div>
+        <div className="ref-stat-card"><span>♧ BEE ACTIVITY</span><strong>{Math.round(telem.activity)}%</strong><small>Normal range<br/>65 — 95%</small><MiniSpark data={makeSeries(telem.activity,8,18)} color="#5D9A59"/></div>
+      </div>
+
+      <div className="ref-health-main">
+        <section className="ref-chart-card">
+          <div className="ref-card-head">
+            <div>
+              <span className="ref-card-kicker">HIVE ACTIVITY TREND</span>
+              <h2>{cfg[1]} <small>· {RANGE_LABELS[range]}</small></h2>
             </div>
-            <div className="graph-callout"><b>{current}</b><span>latest reading</span><span className={alert?'down':'up'}>{alert?'−':'+'}{range==='24H'?'2.4':'6.8'}% vs prior period</span></div>
-            <MainChart data={series} color={cfg[4]} unit={cfg[2]} isAlert={alert}/>
-            <div className="graph-summary">
-              <div><span>MIN</span><b>{Math.min(...series).toFixed(cfg[2]==='kg'||cfg[2]==='°C'?1:0)}{cfg[2]}</b></div>
-              <div><span>AVERAGE</span><b>{(series.reduce((a,b)=>a+b,0)/series.length).toFixed(cfg[2]==='kg'||cfg[2]==='°C'?1:0)}{cfg[2]}</b></div>
-              <div><span>MAX</span><b>{Math.max(...series).toFixed(cfg[2]==='kg'||cfg[2]==='°C'?1:0)}{cfg[2]}</b></div>
-              <div><span>TREND</span><b className={alert?'down':'up'}>{alert?'Declining':'Increasing'}</b></div>
+            <div className="ref-range">
+              {['24H','7D','30D'].map(r=><button key={r} className={range===r?'active':''} onClick={()=>setRange(r)}>{r.toLowerCase()}</button>)}
             </div>
           </div>
-
-          <div className={`health-insight ${alert?'critical':''}`}>
-            <div><span>HIVE INSIGHT</span><strong>{alert?'Anomaly needs attention':'Stable operating pattern'}</strong><small>{alert?'Weight and activity moved away from the recent baseline.':'The current curve stays inside the normal operating band and activity is rising through the afternoon.'}</small></div>
-            <button onClick={simulateAlert}>⚠ {alert?'RESET ALERT':'SIMULATE ALERT'} <small>{alertsArmed?'sound armed':'muted'}</small></button>
+          <div className="ref-chart-metrics">
+            <b>{current}</b><span>latest reading</span>
+            <span className={alert?'ref-down':'ref-up'}>{alert?'−':'+'}{range==='24H'?'2.4':'6.8'}% vs prior period</span>
           </div>
-        </div>
+          <MainChart data={series} color={cfg[4]} unit={cfg[2]} isAlert={alert}/>
+          <div className="ref-summary-row">
+            <div><span>MIN</span><b>{Math.min(...series).toFixed(cfg[2]==='kg'||cfg[2]==='°C'?1:0)}{cfg[2]}</b></div>
+            <div><span>AVERAGE</span><b>{(series.reduce((a,b)=>a+b,0)/series.length).toFixed(cfg[2]==='kg'||cfg[2]==='°C'?1:0)}{cfg[2]}</b></div>
+            <div><span>MAX</span><b>{Math.max(...series).toFixed(cfg[2]==='kg'||cfg[2]==='°C'?1:0)}{cfg[2]}</b></div>
+            <div><span>TREND</span><b className={alert?'ref-down':'ref-up'}>{alert?'Declining':'Increasing'}</b></div>
+          </div>
+        </section>
+
+        <aside className={`ref-insights ${alert?'critical':''}`}>
+          <div className="ref-card-head single">
+            <div>
+              <span className="ref-card-kicker">HEALTH INSIGHTS</span>
+              <h2>{alert?'ATTENTION':'STABLE'}</h2>
+            </div>
+            <span className={`health-badge ${alert?'bad':''}`}>{Math.round(telem.health)}%</span>
+          </div>
+          <div className="insight-list">
+            {alert ? <>
+              <p>● Unusual weight movement detected.</p>
+              <p>● Bee activity is below the recent baseline.</p>
+              <p>● Temperature is moving above the normal band.</p>
+            </> : <>
+              <p>● Hive activity is normal.</p>
+              <p>● Temperature is stable.</p>
+              <p>● No unusual fluctuations in weight.</p>
+            </>}
+          </div>
+          <div className="battery-row">
+            <div><span>BATTERY</span><b>{Math.round(telem.battery)}%</b></div>
+            <div className="battery-bar"><i style={{width:`${Math.round(telem.battery)}%`}}/></div>
+          </div>
+          <button className="report-link" onClick={()=>setMetric('activity')}>View detailed report →</button>
+          <button className={`ref-alert-action ${alert?'active':''}`} onClick={simulateAlert}>⚠ {alert?'Reset simulated alert':'Simulate alert'} <small>{alertsArmed?'sound armed':'muted'}</small></button>
+        </aside>
+      </div>
+    </main>}
+
+    {view==='market' && <main className="ref-page market-ref">
+      <div className="ref-hero-copy">
+        <span className="ref-kicker amber">02 · B-MART</span>
+        <h1>Traceable Honey,<br/><em>Down to the Hive.</em></h1>
+        <p>Every jar tells a story — from the flower to your table.</p>
+      </div>
+
+      <div className="market-kpis">
+        <div><span>▣ TOTAL PRODUCTS</span><strong>12</strong><small>+2 new</small></div>
+        <div><span>▤ ACTIVE ORDERS</span><strong>48</strong><small>+12%</small></div>
+        <div><span>₹ TOTAL REVENUE</span><strong>₹18,420</strong><small>+24%</small></div>
+        <div><span>★ AVG. RATING</span><strong>4.8</strong><small>(532 reviews)</small></div>
+      </div>
+
+      <div className="market-content-grid">
+        <section className="featured-card">
+          <div className="featured-head"><span className="ref-card-kicker">FEATURED PRODUCTS</span><button onClick={()=>setProductOpen(PRODUCTS[0])}>View All →</button></div>
+          <div className="featured-products">
+            {PRODUCTS.map((p)=><button key={p.batch} className={`featured-product ${productOpen.batch===p.batch?'selected':''}`} onClick={()=>setProductOpen(p)}>
+              <div className={`featured-jar ${p.tone}`} style={{backgroundImage:'url("/media/internal-bg/market-bg.jpg")'}} aria-label={p.name}></div>
+              <span>{p.name}</span>
+              <b>{p.price}</b>
+              <small>{p.weight} · {p.origin}</small>
+            </button>)}
+          </div>
+          <div className="featured-detail">
+            <div><span>{productOpen.hive} · {productOpen.origin}</span><h3>{productOpen.name}</h3><small>Harvested {productOpen.harvest} · Batch {productOpen.batch}</small></div>
+            <strong>{productOpen.price}</strong>
+          </div>
+        </section>
+
+        <aside className="market-trace-card">
+          <span className="ref-card-kicker">TRACEABILITY</span>
+          <p>Scan the QR code on your jar to explore its journey from hive to home.</p>
+          <div className="trace-photo-mini" style={{backgroundImage:'url("/media/internal-bg/market-bg.jpg")'}} aria-hidden="true"/>
+          <div className="trace-mini"><span>HIVE</span><b>{productOpen.hive}</b></div>
+          <div className="trace-mini"><span>BATCH</span><b>{productOpen.batch}</b></div>
+          <div className="trace-mini"><span>NFT ASSET</span><b>{productOpen.nft}</b></div>
+          <button onClick={()=>setMarketNotice(`Demo provenance opened for ${productOpen.batch}.`)}>View Provenance →</button>
+          {marketNotice && <small className="market-notice">{marketNotice}</small>}
+        </aside>
+      </div>
+
+      <section className="market-detail-strip">
+        <div><span>PRODUCT</span><b>{productOpen.name}</b></div>
+        <div><span>SOURCE</span><b>{productOpen.hive} · {productOpen.origin}</b></div>
+        <div><span>HARVEST</span><b>{productOpen.harvest}</b></div>
+        <div><span>NFT / PROVENANCE</span><b>{productOpen.nft}</b></div>
+        <div><span>PRICE</span><b>{productOpen.price}</b></div>
       </section>
     </main>}
 
-    {view==='market' && <main className="page market-page">
-      <div className="page-head"><div><span className="kicker amber">02 · B-MART</span><h1>TRACEABLE HONEY, <em>DOWN TO THE HIVE.</em></h1><p>Every demo product below carries source, harvest, batch and digital asset information for the buyer.</p></div><div className="demo-pill">DEMO MARKETPLACE · NO REAL COMMERCE</div></div>
-      <div className="market-layout">
-        <div className="product-list">{PRODUCTS.map((p,i)=><button key={p.batch} className={`market-card ${productOpen.batch===p.batch?'active':''}`} onClick={()=>setProductOpen(p)}>
-          <span className="product-no">0{i+1}</span>
-          <div className={`honey-jar-display ${p.tone}`}><div className="jar-cap"/><div className="jar-neck"/><div className="jar-body"><div className="jar-honey"/><div className="jar-paper"><span>HIVESENSE</span><strong>RAW HONEY</strong><small>{p.origin}</small><b>TRACEABLE</b></div></div><div className="jar-wax">HS</div></div>
-          <div className="market-card-copy"><span>{p.origin} · {p.hive}</span><h2>{p.name}</h2><strong>{p.price}</strong><small>{p.weight} · harvested {p.harvest}</small></div>
-        </button>)}</div>
+    {view==='trace' && <main className="ref-page trace-ref">
+      <div className="ref-hero-copy">
+        <span className="ref-kicker">03 · TRACEABILITY</span>
+        <h1>Follow Every <em>Stage.</em></h1>
+        <p>Choose a hive and date to see exactly which process the batch is currently going through.</p>
+      </div>
+      <div className="trace-toolbar">
+        <select value={traceHive} onChange={e=>setTraceHive(e.target.value)}>{HIVES.map(h=><option key={h.id}>{h.id}</option>)}</select>
+        <select value={traceDate} onChange={e=>setTraceDate(e.target.value)}>{[...new Set(TRACE_RECORDS.map(r=>r.date))].map(d=><option key={d}>{d}</option>)}</select>
+      </div>
+      <div className="trace-ref-grid">
+        <section className="trace-main-ref">
+          <div className="featured-head"><span className="ref-card-kicker">ACTIVE TRACE RECORD</span><b>{trace.status}</b></div>
+          <h2>{trace.product}</h2>
+          <p>{trace.hive} · {trace.origin} · {trace.date} · {trace.time}</p>
+          <div className="trace-progress">{['HIVE','HARVEST','QUALITY','BATCH','B-MART'].map((s,i)=><div key={s} className={`trace-progress-step ${i<trace.stage?'done':''} ${i===trace.stage-1?'current':''}`}><span>{i+1}</span><b>{s}</b><small>{i<trace.stage?'COMPLETE':i===trace.stage-1?'CURRENT':'NEXT'}</small></div>)}</div>
+        </section>
+        <aside className="trace-record-list">
+          <span className="ref-card-kicker">ACTIVE RECORDS</span>
+          {TRACE_RECORDS.map(r=><button key={r.batch} className={r.batch===trace.batch?'active':''} onClick={()=>{setTraceHive(r.hive);setTraceDate(r.date)}}><b>{r.hive}</b><span>{r.date}</span><strong>{r.status}</strong><small>Stage {r.stage}/5</small></button>)}
+        </aside>
+      </div>
+    </main>}
 
-        <section className="product-detail">
-          <div className="detail-hero"><span className="kicker amber">PRODUCT DETAIL · DEMO</span><h2>{productOpen.name}</h2><p>{productOpen.weight} · {productOpen.origin} · {productOpen.hive}</p><strong>{productOpen.price}</strong></div>
-          <div className="detail-blocks">
-            <div className="detail-block"><span>TRACEABILITY</span><b>HIVE → HARVEST → QUALITY → BATCH → B-MART</b><small>Every stage is linked to the demo batch record.</small></div>
-            <div className="detail-block"><span>NFT DIGITAL ASSET</span><b>{productOpen.nft}</b><small>Demonstration token / provenance reference. No real blockchain transaction is implied.</small></div>
-            <div className="detail-block"><span>SOURCE</span><b>{productOpen.hive} · {productOpen.origin}</b><small>Harvest record dated {productOpen.harvest} at 08:32–17:22 demo window.</small></div>
-            <div className="detail-block"><span>BATCH</span><b>{productOpen.batch}</b><small>Quality record A+ · moisture check passed · demo record linked.</small></div>
-          </div>
-          <div className="timeline-detail">
-            {[
-              ['HIVE','18 Sep 2026 · 06:40','Sensor data recorded'],
-              ['HARVEST','18 Sep 2026 · 10:15','Lot collected'],
-              ['QUALITY','18 Sep 2026 · 12:10','Quality record created'],
-              ['BATCH','18 Sep 2026 · 14:20','Batch sealed'],
-              ['B-MART','18 Sep 2026 · 17:22','Listing ready']
-            ].map(([a,b,c],i)=><div key={a}><span>{String(i+1).padStart(2,'0')}</span><b>{a}</b><small>{b}</small><em>{c}</em></div>)}
-          </div>
-          <div className="buy-row"><span>DEMO PRICE</span><strong>{productOpen.price}</strong><button>BUY DEMO PRODUCT →</button></div>
+    {view==='pollination' && <main className="ref-page poll-ref">
+      <div className="ref-hero-copy">
+        <span className="ref-kicker green">04 · POLLINATION NETWORK</span>
+        <h1>Find the Best <em>Bloom Zone.</em></h1>
+        <p>Explore pollen zones, crop health, and pollination activity across the region.</p>
+      </div>
+      <div className="poll-toolbar">
+        <select><option>Select Crop — Multiflora</option><option>Mango</option><option>Mustard</option><option>Sunflower</option></select>
+        <input value={pollSearch} onChange={e=>setPollSearch(e.target.value)} placeholder="Enter locality"/>
+        <button onClick={findPoll}>Find Zones →</button>
+      </div>
+      <div className="poll-ref-grid">
+        <section className="poll-map-ref">
+          <div className="poll-map-bg"/>
+          {ZONES.map((z,i)=><button className={`poll-marker pm${i+1}`} key={z.name} onClick={()=>setPollZone(z)}><span/>{z.area}</button>)}
+          <div className="ref-compass"><b>N</b><strong>↑</strong></div>
+          <div className="poll-map-legend"><span>Pollination Potential</span><i className="high"/> High <i className="medium"/> Medium <i className="low"/> Low</div>
+        </section>
+        <aside className="bloom-zones-card">
+          <span className="ref-card-kicker">TOP BLOOM ZONES</span>
+          {ZONES.slice().sort((a,b)=>b.index-a.index).slice(0,4).map((z,i)=><button key={z.name} className={pollZone?.name===z.name?'active':''} onClick={()=>setPollZone(z)}><strong>{i+1}</strong><span><b>{z.area}</b><small>{z.index>=90?'High':'Medium'} potential</small></span><em>({z.index}%)</em></button>)}
+        </aside>
+      </div>
+      <div className="poll-bottom-grid">
+        <section className="flower-calendar"><span className="ref-card-kicker">FLOWERING CALENDAR</span><div className="months">{['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map(m=><span key={m}>{m}</span>)}</div><div className="flower-bars"><i/><i/><i/></div><div className="flower-key"><span><i/> Mustard</span><span><i/> Sunflower</span><span><i/> Wildflower</span></div></section>
+        <section className="poll-selection-card">
+          {pollZone ? <><span className="ref-card-kicker green">SELECTED ZONE</span><h3>{pollZone.name}</h3><strong>{pollZone.index}%</strong><p>{pollZone.bloom}</p><small>{pollZone.lat} · {pollZone.lon}</small></> : <><span className="ref-card-kicker">SELECT A ZONE</span><h3>More blooms.<br/>A healthier tomorrow.</h3><p>Pick a locality or map marker to inspect the demonstration pollination index.</p></>}
         </section>
       </div>
     </main>}
 
-    {view==='trace' && <main className="page trace-page">
-      <div className="page-head"><div><span className="kicker">03 · TRACEABILITY</span><h1>FOLLOW EVERY <em>STAGE.</em></h1><p>Choose a hive and date to see which process the batch is currently going through.</p></div>
-        <div className="trace-selects"><select value={traceHive} onChange={e=>setTraceHive(e.target.value)}>{HIVES.map(h=><option key={h.id}>{h.id}</option>)}</select><select value={traceDate} onChange={e=>setTraceDate(e.target.value)}>{[...new Set(TRACE_RECORDS.map(r=>r.date))].map(d=><option key={d}>{d}</option>)}</select></div></div>
-      <div className="trace-layout-full"><section className="trace-main-card"><div className="trace-top"><span>{trace.batch}</span><b>{trace.status}</b></div><h2>{trace.product}</h2><p>{trace.hive} · {trace.origin} · {trace.date} · {trace.time}</p><div className="trace-steps">{['HIVE','HARVEST','QUALITY','BATCH','B-MART'].map((s,i)=><div className={`trace-step2 ${i<trace.stage?'done':''} ${i===trace.stage-1?'current':''}`} key={s}><span>{i+1}</span><b>{s}</b><small>{i<trace.stage?'COMPLETE':i===trace.stage-1?'CURRENT':'NEXT'}</small></div>)}</div></section><aside className="trace-records"><span className="kicker">ACTIVE RECORDS</span>{TRACE_RECORDS.map(r=><button key={r.batch} className={r.batch===trace.batch?'active':''} onClick={()=>{setTraceHive(r.hive);setTraceDate(r.date)}}><b>{r.hive}</b><span>{r.date}</span><strong>{r.status}</strong><small>Stage {r.stage}/5</small></button>)}</aside></div>
-    </main>}
-
-    {view==='pollination' && <main className="page poll-page">
-      <div className="page-head"><div><span className="kicker green">04 · POLLINATION NETWORK</span><h1>FIND THE <em>BEST BLOOM ZONE.</em></h1><p>Enter a locality and select a mapped zone to inspect its demo pollination index.</p></div><div className="poll-search"><input value={pollSearch} onChange={e=>setPollSearch(e.target.value)} placeholder="Enter locality · Borivali, Karjat…"/><button onClick={findPoll}>FIND LOCATION →</button></div></div>
-      <div className="poll-layout-full"><section className="poll-map-large"><div className="map-tile"/><div className="topo-lines tl1"/><div className="topo-lines tl2"/><div className="topo-lines tl3"/>
-        {ZONES.map((z,i)=><button className={`zone-pin zp${i+1}`} key={z.name} onClick={()=>setPollZone(z)}><span/><b>{z.area}</b></button>)}
-        <div className="compass"><span>N</span><i/><b>↑</b></div><div className="scale">0&nbsp;&nbsp; 2&nbsp;&nbsp; 5 km</div><div className="map-coordinates">REGIONAL DEMO MAP · WESTERN INDIA</div></section>
-        <aside className="poll-panel">{!pollZone?<div className="poll-empty"><strong>⌖</strong><h2>CHOOSE A LOCALITY</h2><p>Type an area above or click a zone marker.</p></div>:<><span className="kicker green">NEAREST DEMO ZONE</span><h2>{pollZone.name}</h2><div className="poll-score"><strong>{pollZone.index}</strong><span>/100</span><small>POLLINATION INDEX</small></div><div className="poll-detail-row"><span>AREA</span><b>{pollZone.area}</b></div><div className="poll-detail-row"><span>BLOOM</span><b>{pollZone.bloom}</b></div><div className="poll-detail-row"><span>COORDINATES</span><b>{pollZone.lat} · {pollZone.lon}</b></div><div className="poll-detail-row"><span>DEMO RANGE</span><b>{pollZone.distance}</b></div><div className="poll-explain"><span>WHY THIS LOCATION</span><p>High bee activity and flowering coverage combine to produce a strong index in the demonstration model.</p></div></>}</aside></div>
-    </main>}
-
-    {view==='regional' && <main className="page regional-page">
-      <div className="page-head"><div><span className="kicker">05 · REGIONAL INTELLIGENCE</span><h1>THE SYSTEM <em>AT LANDSCAPE SCALE.</em></h1><p>Compare hive activity, pollination, environment, honey output and alerts by region.</p></div><div className="region-tabs">{Object.keys(REGIONS).map(r=><button key={r} className={region===r?'active':''} onClick={()=>setRegion(r)}>{r}</button>)}</div></div>
-      <div className="regional-layout-full"><section className="regional-map-large"><div className="land-shape"/><div className="regional-cluster rc1"/><div className="regional-cluster rc2"/><div className="regional-cluster rc3"/><div className="regional-cluster rc4"/><div className="regional-cluster rc5"/><div className="region-center"><span>{region.toUpperCase()}</span><strong>{REGIONS[region].pollination}</strong><small>POLLINATION INDEX</small></div><div className="regional-compass"><b>N</b><span>↑</span></div><div className="regional-map-caption">DEMO CLUSTERS · WESTERN INDIA</div></section>
-        <aside className="regional-data"><div className="regional-big"><span>REGIONAL READ</span><p>{REGIONS[region].note}</p></div>{[['ACTIVE HIVES',REGIONS[region].hives,REGIONS[region].trend],['POLLINATION',REGIONS[region].pollination,'coverage'],['HONEY OUTPUT',REGIONS[region].honey,'demo estimate'],['ENVIRONMENT',REGIONS[region].environment,'baseline'],['ALERTS',String(REGIONS[region].alerts),'review']].map(([a,b,c])=><div className="regional-stat" key={a}><span>{a}</span><strong>{b}</strong><small>{c}</small></div>)}</aside></div>
+    {view==='regional' && <main className="ref-page regional-ref">
+      <div className="ref-hero-copy">
+        <span className="ref-kicker">05 · REGIONAL INTELLIGENCE</span>
+        <h1>The System at <em>Landscape Scale.</em></h1>
+        <p>Understand regional patterns, ecosystem health, and resource distribution.</p>
+      </div>
+      <div className="region-toolbar">
+        {Object.keys(REGIONS).map(r=><button key={r} className={region===r?'active':''} onClick={()=>setRegion(r)}>{r}</button>)}
+      </div>
+      <div className="regional-ref-grid">
+        <section className="regional-map-ref">
+          <div className="regional-map-bg"/>
+          <div className="state-shape"/>
+          {[['Nashik','28%','24%'],['Aurangabad','53%','20%'],['Mumbai','21%','57%'],['Pune','48%','59%']].map(([n,l,t])=><button key={n} className="city-dot" style={{left:l,top:t}}><i/>{n}</button>)}
+          <div className="regional-compass"><b>N</b><strong>↑</strong></div>
+          <div className="ecosystem-legend"><span>Ecosystem Health</span><i className="g"/> Excellent <i className="y"/> Good <i className="o"/> Moderate <i className="r"/> Low</div>
+        </section>
+        <aside className="key-insights-card">
+          <span className="ref-card-kicker">KEY INSIGHTS</span>
+          <p>☘ Higher pollination activity<br/><small>in Western Ghats region</small></p>
+          <p>◌ Crop health stable<br/><small>across major districts</small></p>
+          <p>♢ Ideal climate conditions<br/><small>for honey production</small></p>
+          <p>♧ Conservation areas identified<br/><small>near forest belts</small></p>
+        </aside>
+      </div>
+      <div className="regional-bottom-grid">
+        <section className="regional-trends">
+          <div className="featured-head"><span className="ref-card-kicker">REGIONAL TRENDS</span><div className="trend-tabs"><button className="active">Temperature</button><button>Vegetation</button><button>Pollination</button></div></div>
+          <MainChart data={regionSeries} color="#4F7751" unit="%" isAlert={false}/>
+        </section>
+        <section className="regional-photo-card"><span>Healthy landscapes<br/>support thriving hives.</span></section>
+      </div>
+      <div className="regional-kpis">
+        <div><span>ACTIVE HIVES</span><b>{regional.hives}</b></div>
+        <div><span>POLLINATION</span><b>{regional.pollination}</b></div>
+        <div><span>HONEY OUTPUT</span><b>{regional.honey}</b></div>
+        <div><span>ENVIRONMENT</span><b>{regional.environment}</b></div>
+        <div><span>ALERTS</span><b>{regional.alerts}</b></div>
+      </div>
     </main>}
 
     {view==='home' && <div className="home-bottom"><span>Click the hive · market · crop field · or regional station</span><span>HIVESENSE · 2026 DEMO</span></div>}
   </div>;
 }
+
 export default App;
