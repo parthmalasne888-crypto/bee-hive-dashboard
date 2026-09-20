@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 const HIVES = [
   { id:'HIVE 01', location:'Borivali', health:96, temp:33.8, humidity:66, weight:46.2, activity:86, battery:96 },
@@ -46,6 +46,237 @@ const METRICS = [
 ];
 
 const RANGE_LABELS = { '24H':'Today', '7D':'7 days', '30D':'30 days' };
+
+const INDIA_STATES_GEOJSON_URL = 'https://gist.githubusercontent.com/jbrobst/56c13bbbf9d97d187fea01ca62ea5112/raw/e388c4cae20aa53cb5090210a42ebb9b765c0a36/india_states.geojson';
+const ESRI_IMAGERY_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const ESRI_LABEL_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
+
+const REGIONAL_STATE_SCORES = {
+  Gujarat: 66,
+  'Madhya Pradesh': 78,
+  Maharashtra: 91,
+  Goa: 86,
+  Karnataka: 89,
+  Telangana: 73,
+  Chhattisgarh: 61,
+  Odisha: 57,
+};
+
+const MAP_REGIONS = Object.entries(REGIONAL_STATE_SCORES)
+  .map(([name,value])=>({name,value}))
+  .sort((a,b)=>b.value-a.value);
+
+const REGIONAL_DETAILS = {
+  Maharashtra: { hives:'7,420', pollination:'88%', honey:'18.7 t', environment:'STABLE', alerts:8, trend:'+8.2%' },
+};
+
+function normalizeStateName(name=''){
+  const value=String(name).trim().toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,' ');
+  const aliases={
+    'orissa':'Odisha',
+    'uttaranchal':'Uttarakhand',
+    'nct of delhi':'Delhi',
+    'the dadra and nagar haveli and daman and diu':'Dadra and Nagar Haveli and Daman and Diu',
+    'dadra and nagar haveli and daman and diu':'Dadra and Nagar Haveli and Daman and Diu',
+  };
+  if(aliases[value]) return aliases[value];
+  const found=Object.keys(REGIONAL_STATE_SCORES).find(k=>k.toLowerCase()===value);
+  return found || String(name).trim();
+}
+
+function geostateName(feature){
+  const p=feature?.properties||{};
+  return normalizeStateName(p.ST_NM||p.st_nm||p.NAME_1||p.name||p.state_name||p.STNAME||p.state||'');
+}
+
+function scoreColor(value){
+  if(value==null) return '#AAB5A3';
+  if(value>=85) return '#4E8B56';
+  if(value>=70) return '#D1A13B';
+  return '#C85A46';
+}
+
+function scoreLabel(value){
+  if(value==null) return 'No demo telemetry';
+  if(value>=85) return 'High';
+  if(value>=70) return 'Moderate';
+  return 'Low';
+}
+
+function popupStyle(){
+  return { maxWidth: 250, className: 'hs-leaflet-popup' };
+}
+function MapPanel({type='pollination', onZoneSelect, selectedZone, region}){
+  const isPoll=type==='pollination';
+  const hostRef=useRef(null);
+  const mapRef=useRef(null);
+
+  useEffect(()=>{
+    const L=window.L;
+    if(!L || !hostRef.current || mapRef.current) return;
+
+    const map=L.map(hostRef.current, {
+      zoomControl:false,
+      attributionControl:true,
+      scrollWheelZoom:true,
+      dragging:true,
+      doubleClickZoom:true,
+      touchZoom:true,
+      minZoom:isPoll?7:4,
+      maxZoom:isPoll?13:9,
+      preferCanvas:true,
+    });
+
+    mapRef.current=map;
+
+    const imagery=L.tileLayer(ESRI_IMAGERY_TILES, {
+      maxZoom:19,
+      attribution:'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+    }).addTo(map);
+
+    L.tileLayer(ESRI_LABEL_TILES, {
+      maxZoom:19,
+      opacity:.82,
+      attribution:'Labels © Esri',
+      pane:'overlayPane',
+    }).addTo(map);
+
+    L.control.zoom({position:'topright'}).addTo(map);
+    L.control.scale({imperial:false,position:'bottomright',maxWidth:110}).addTo(map);
+
+    if(isPoll){
+      map.setView([19.12,73.18],8.25);
+
+      ZONES.forEach((z)=>{
+        const value=z.index;
+        const color=value>=90?'#4E8B56':value>=80?'#D1A13B':'#C85A46';
+        const radius=7500 + Math.max(0,value-70)*900;
+
+        const heat=L.circle([Number(z.lat.replace('° N','')),Number(z.lon.replace('° E',''))], {
+          radius,
+          color,
+          weight:1.15,
+          opacity:.72,
+          fillColor:color,
+          fillOpacity:.21,
+          bubblingMouseEvents:true,
+        }).addTo(map);
+
+        heat.bindPopup(`
+          <div class="hs-popup">
+            <div class="hs-popup-kicker">POLLINATION ZONE</div>
+            <strong>${z.name}</strong>
+            <div class="hs-popup-row"><span>Pollination index</span><b style="color:${color}">${value}%</b></div>
+            <div class="hs-popup-row"><span>Area</span><b>${z.area}</b></div>
+            <div class="hs-popup-row"><span>Bloom</span><b>${z.bloom}</b></div>
+            <small>Demonstration telemetry from the existing HiveSense dataset.</small>
+          </div>
+        `,popupStyle());
+
+        heat.on('click',()=>onZoneSelect?.(z));
+        heat.on('mouseover',()=>heat.setStyle({weight:2.6,fillOpacity:.29}));
+        heat.on('mouseout',()=>heat.setStyle({weight:1.15,fillOpacity:.21}));
+
+        const dot=L.circleMarker([Number(z.lat.replace('° N','')),Number(z.lon.replace('° E',''))], {
+          radius:5.5,
+          color:'#F8F4E9',
+          weight:2,
+          fillColor:color,
+          fillOpacity:1,
+        }).addTo(map);
+
+        dot.bindTooltip(`${z.area} · ${value}%`, {direction:'top',offset:[0,-6],opacity:.95});
+        dot.on('click',()=>onZoneSelect?.(z));
+      });
+
+      fetch(INDIA_STATES_GEOJSON_URL)
+        .then(r=>r.ok?r.json():Promise.reject(new Error('Unable to load India boundaries')))
+        .then(data=>{
+          if(!mapRef.current) return;
+          L.geoJSON(data, {
+            filter:(feature)=>geostateName(feature)==='Maharashtra',
+            style:()=>({color:'#EAF4E6',weight:2.1,opacity:.9,fill:false,dashArray:'5 4'}),
+          }).addTo(map);
+        })
+        .catch(()=>{});
+    }else{
+      const viewByRegion={
+        Maharashtra:[19.45,75.3,6.05],
+        'Western Ghats':[16.8,74.8,6.25],
+        Konkan:[18.85,73.05,6.65],
+      };
+      const [lat,lng,zoom]=viewByRegion[region]||viewByRegion.Maharashtra;
+      map.setView([lat,lng],zoom);
+
+      fetch(INDIA_STATES_GEOJSON_URL)
+        .then(r=>r.ok?r.json():Promise.reject(new Error('Unable to load India boundaries')))
+        .then(data=>{
+          if(!mapRef.current) return;
+          const layer=L.geoJSON(data, {
+            style:(feature)=>{
+              const name=geostateName(feature);
+              const score=REGIONAL_STATE_SCORES[name];
+              const isSelected = region==='Maharashtra' ? name==='Maharashtra'
+                : region==='Konkan' ? ['Maharashtra','Goa'].includes(name)
+                : region==='Western Ghats' ? ['Maharashtra','Goa','Karnataka','Kerala','Tamil Nadu'].includes(name)
+                : false;
+              return {
+                color:isSelected?'#F4F0DD':'#FFFFFF',
+                weight:isSelected?2.2:.8,
+                opacity:.95,
+                fillColor:scoreColor(score),
+                fillOpacity:score==null?.22:.74,
+              };
+            },
+            onEachFeature:(feature,shape)=>{
+              const name=geostateName(feature);
+              const score=REGIONAL_STATE_SCORES[name];
+              const details=REGIONAL_DETAILS[name];
+              shape.bindPopup(`
+                <div class="hs-popup">
+                  <div class="hs-popup-kicker">REGIONAL INTELLIGENCE</div>
+                  <strong>${name||'Region'}</strong>
+                  <div class="hs-popup-row"><span>Intelligence score</span><b style="color:${scoreColor(score)}">${score ?? '—'}</b></div>
+                  <div class="hs-popup-row"><span>Status</span><b>${scoreLabel(score)}</b></div>
+                  ${details?`<div class="hs-popup-mini"><span>Pollination ${details.pollination}</span><span>Hives ${details.hives}</span><span>Honey ${details.honey}</span><span>Alerts ${details.alerts}</span></div>`:''}
+                  <small>${score==null?'No regional demo telemetry is currently attached to this state.':'Existing HiveSense demonstration data visualized on actual state geometry.'}</small>
+                </div>
+              `,popupStyle());
+
+              shape.on({
+                mouseover:()=>{
+                  shape.setStyle({weight:score!=null?2.2:1.4,fillOpacity:score==null?.32:.86});
+                  shape.bringToFront();
+                },
+                mouseout:()=>{
+                  layer.resetStyle(shape);
+                },
+              });
+            },
+          }).addTo(map);
+        })
+        .catch(()=>{});
+    }
+
+    return ()=>{
+      map.remove();
+      mapRef.current=null;
+    };
+  },[isPoll,region,onZoneSelect]);
+
+  return <div className={`geo-map ${isPoll?'geo-map-poll':'geo-map-region'}`}>
+    <div className="real-leaflet-host" ref={hostRef} aria-label={isPoll?'Real geographic pollination map':'Real India regional intelligence map'} />
+    <div className="geo-map-head"><div><b>{isPoll?'WESTERN INDIA · POLLINATION MAP':'INDIA · REGIONAL INTELLIGENCE'}</b><small>{isPoll?'Real satellite basemap · georeferenced pollination zones':'Real state boundaries · demonstration intelligence data'}</small></div><span>{isPoll?'LIVE INDEX':region.toUpperCase()}</span></div>
+
+    {!isPoll && <div className="region-live-values">
+      <div className="live-title">ECOSYSTEM HEALTH</div>
+      {MAP_REGIONS.slice(0,5).map(r=><div key={r.name}><span className="status-dot" style={{background:scoreColor(r.value)}}/>{r.name}<b>{r.value}</b></div>)}
+    </div>}
+
+    <div className="geo-map-legend"><span><i className="g"/>{isPoll?'High':'Excellent'}</span><span><i className="y"/>{isPoll?'Medium':'Good / Moderate'}</span><span><i className="r"/>{isPoll?'Low':'Low'}</span></div>
+    <div className="geo-map-scale">REAL MAP · WGS84 · DEMO DATA</div>
+  </div>;
+}
 
 function clamp(v,a,b){ return Math.min(b,Math.max(a,v)); }
 
@@ -408,10 +639,7 @@ function App(){
       </div>
       <div className="poll-ref-grid">
         <section className="poll-map-ref">
-          <div className="poll-map-bg"/>
-          {ZONES.map((z,i)=><button className={`poll-marker pm${i+1}`} key={z.name} onClick={()=>setPollZone(z)}><span/>{z.area}</button>)}
-          <div className="ref-compass"><b>N</b><strong>↑</strong></div>
-          <div className="poll-map-legend"><span>Pollination Potential</span><i className="high"/> High <i className="medium"/> Medium <i className="low"/> Low</div>
+          <MapPanel type="pollination" selectedZone={pollZone} onZoneSelect={setPollZone}/>
         </section>
         <aside className="bloom-zones-card">
           <span className="ref-card-kicker">TOP BLOOM ZONES</span>
@@ -437,11 +665,7 @@ function App(){
       </div>
       <div className="regional-ref-grid">
         <section className="regional-map-ref">
-          <div className="regional-map-bg"/>
-          <div className="state-shape"/>
-          {[['Nashik','28%','24%'],['Aurangabad','53%','20%'],['Mumbai','21%','57%'],['Pune','48%','59%']].map(([n,l,t])=><button key={n} className="city-dot" style={{left:l,top:t}}><i/>{n}</button>)}
-          <div className="regional-compass"><b>N</b><strong>↑</strong></div>
-          <div className="ecosystem-legend"><span>Ecosystem Health</span><i className="g"/> Excellent <i className="y"/> Good <i className="o"/> Moderate <i className="r"/> Low</div>
+          <MapPanel type="regional" region={region}/>
         </section>
         <aside className="key-insights-card">
           <span className="ref-card-kicker">KEY INSIGHTS</span>
